@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Examen de Anatomía</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --text:#111111;
+      --muted:#6b7280;
+      --line:#d7dce2;
+      --accent:#0b57d0;
+      --correct:#0a7a35;
+      --correct-bg:#eaf7ef;
+      --wrong:#b42318;
+      --wrong-bg:#fff0ee;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      overflow:hidden;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    button{font:inherit}
+
+    #app{
+      width:100%;
+      height:100%;
+      position:relative;
+      background:#fff;
+    }
+
+    .screen{
+      width:100%;
+      height:100%;
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .hidden{display:none !important}
+
+    /* Inicio */
+    #startScreen{
+      cursor:pointer;
+      text-align:center;
+      padding:24px;
+    }
+
+    .startTitle{
+      font-size:clamp(34px,5vw,64px);
+      font-weight:780;
+      letter-spacing:-0.035em;
+      margin:0 0 10px;
+    }
+
+    .startSub{
+      font-size:clamp(18px,2vw,26px);
+      color:var(--muted);
+      margin:0;
+    }
+
+    .startHint{
+      position:absolute;
+      bottom:max(20px, env(safe-area-inset-bottom));
+      left:0;
+      right:0;
+      font-size:14px;
+      color:var(--muted);
+    }
+
+    /* Vista de PDF */
+    #pdfScreen{
+      background:#000;
+      cursor:pointer;
+    }
+
+    #pdfCanvas{
+      display:block;
+      max-width:100%;
+      max-height:100%;
+      background:#fff;
+    }
+
+    .pdfTapHint{
+      position:absolute;
+      right:max(16px, env(safe-area-inset-right));
+      bottom:max(14px, env(safe-area-inset-bottom));
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color:#fff;
+      background:rgba(0,0,0,.46);
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+      pointer-events:none;
+    }
+
+    .pdfError{
+      max-width:760px;
+      padding:32px;
+      color:#fff;
+      text-align:center;
+      line-height:1.45;
+      font-size:18px;
+    }
+
+    /* Preguntas */
+    #questionScreen{
+      background:#fff;
+      align-items:stretch;
+      justify-content:stretch;
+    }
+
+    .questionPage{
+      width:100%;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding:
+        max(16px, env(safe-area-inset-top))
+        max(28px, env(safe-area-inset-right))
+        max(16px, env(safe-area-inset-bottom))
+        max(28px, env(safe-area-inset-left));
+    }
+
+    .questionTop{
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      min-height:20px;
+      margin-bottom:6px;
+      flex:0 0 auto;
+    }
+
+    .progress{
+      font-size:12px;
+      color:var(--muted);
+      font-variant-numeric:tabular-nums;
+      letter-spacing:.02em;
+    }
+
+    .questionBody{
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      max-width:1180px;
+      width:100%;
+      margin:0 auto;
+    }
+
+    .questionText{
+      margin:0 0 clamp(10px,1.8vh,18px);
+      font-size:clamp(18px,2.15vw,31px);
+      line-height:1.24;
+      font-weight:650;
+      letter-spacing:-0.02em;
+    }
+
+    .questionText strong{font-weight:800}
+
+    .options{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:clamp(7px,1.3vh,12px) clamp(12px,1.5vw,18px);
+    }
+
+    .option{
+      width:100%;
+      min-height:46px;
+      border:1.5px solid var(--line);
+      background:#fff;
+      color:#111;
+      text-align:left;
+      padding:clamp(8px,1.3vh,12px) clamp(12px,1.4vw,18px);
+      border-radius:10px;
+      cursor:pointer;
+      font-size:clamp(15px,1.55vw,22px);
+      line-height:1.18;
+      transition:border-color .12s ease, background .12s ease, transform .08s ease;
+    }
+
+    .option:active{transform:scale(.995)}
+    .option:disabled{cursor:default}
+    .option.correct{
+      border-color:var(--correct);
+      color:var(--correct);
+      background:var(--correct-bg);
+      font-weight:700;
+    }
+    .option.wrong{
+      border-color:var(--wrong);
+      color:var(--wrong);
+      background:var(--wrong-bg);
+      font-weight:700;
+    }
+
+    .feedbackRow{
+      min-height:42px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      margin-top:clamp(8px,1.4vh,14px);
+      flex:0 0 auto;
+    }
+
+    .feedback{
+      min-width:0;
+      font-size:clamp(14px,1.35vw,19px);
+      line-height:1.2;
+      font-weight:650;
+    }
+    .feedback.correctText{color:var(--correct)}
+    .feedback.wrongText{color:var(--wrong)}
+    .explanation{
+      display:block;
+      color:#374151;
+      font-size:0.88em;
+      font-weight:500;
+      margin-top:3px;
+    }
+
+    .nextBtn{
+      flex:0 0 auto;
+      border:0;
+      background:#111;
+      color:#fff;
+      border-radius:10px;
+      padding:10px 18px;
+      min-height:42px;
+      cursor:pointer;
+      font-size:15px;
+      font-weight:700;
+    }
+
+    /* Resultado */
+    #resultScreen{
+      text-align:center;
+      padding:24px;
+    }
+
+    .resultScore{
+      font-size:clamp(68px,11vw,150px);
+      line-height:.95;
+      font-weight:800;
+      letter-spacing:-0.06em;
+    }
+
+    .resultLabel{
+      margin-top:14px;
+      font-size:clamp(18px,2.2vw,30px);
+      color:var(--muted);
+    }
+
+    .restart{
+      margin-top:30px;
+      border:0;
+      border-bottom:2px solid #111;
+      background:transparent;
+      color:#111;
+      padding:7px 2px;
+      cursor:pointer;
+      font-size:16px;
+      font-weight:700;
+    }
+
+    /* Si no se puede bloquear orientación, pedimos giro manual */
+    #portraitBlock{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      background:#fff;
+      color:#111;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:28px;
+    }
+
+    #portraitBlock .rotateIcon{
+      font-size:46px;
+      margin-bottom:12px;
+    }
+
+    #portraitBlock strong{
+      display:block;
+      font-size:24px;
+      margin-bottom:6px;
+    }
+
+    #portraitBlock span{
+      color:var(--muted);
+      font-size:15px;
+    }
+
+    @media (orientation:portrait){
+      #portraitBlock{display:flex}
+    }
+
+    @media (max-height:430px){
+      .questionPage{
+        padding-top:10px;
+        padding-bottom:10px;
+      }
+      .questionTop{margin-bottom:2px}
+      .questionText{
+        font-size:clamp(17px,2vw,25px);
+        margin-bottom:8px;
+      }
+      .option{
+        min-height:40px;
+        padding:7px 11px;
+        font-size:clamp(14px,1.45vw,19px);
+      }
+      .feedbackRow{
+        min-height:34px;
+        margin-top:6px;
+      }
+      .nextBtn{
+        min-height:36px;
+        padding:7px 14px;
+      }
+    }
+
+    @media (max-width:700px){
+      .options{grid-template-columns:1fr}
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      *{transition:none !important}
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <section id="startScreen" class="screen" role="button" tabindex="0" aria-label="Comenzar examen">
+      <div>
+        <h1 class="startTitle">Anatomía</h1>
+        <p class="startSub">Toca para comenzar</p>
+      </div>
+      <div class="startHint">Se intentará activar pantalla completa y orientación horizontal.</div>
+    </section>
+
+    <section id="pdfScreen" class="screen hidden" aria-label="Diapositiva">
+      <canvas id="pdfCanvas"></canvas>
+      <div id="pdfError" class="pdfError hidden"></div>
+      <div class="pdfTapHint">Toca para continuar</div>
+    </section>
+
+    <section id="questionScreen" class="screen hidden" aria-live="polite">
+      <div class="questionPage">
+        <div class="questionTop">
+          <div id="progress" class="progress"></div>
+        </div>
+
+        <main class="questionBody">
+          <div id="questionText" class="questionText"></div>
+          <div id="options" class="options"></div>
+
+          <div class="feedbackRow">
+            <div id="feedback" class="feedback"></div>
+            <button id="nextBtn" class="nextBtn hidden" type="button">Continuar</button>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen hidden">
+      <div>
+        <div id="resultScore" class="resultScore">0/16</div>
+        <div id="resultLabel" class="resultLabel">Examen finalizado</div>
+        <button id="restartBtn" class="restart" type="button">Reiniciar</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="portraitBlock">
+    <div>
+      <div class="rotateIcon">↻</div>
+      <strong>Gira el celular</strong>
+      <span>Este examen está diseñado para usarse en horizontal.</span>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    (() => {
+      "use strict";
+
+      const PDF_FILE = "diapositiva.pdf";
+
+      const questions = [
+        {
+          text: `Juan, estudiante de medicina de la UNIMAG, se resbala bajando unas escaleras y queda con dolor en la región anterior del muslo. Desde entonces puede extender la rodilla, pero nota dificultad para combinar <strong>flexión, abducción y rotación lateral de la cadera</strong>. ¿Qué músculo está más probablemente lesionado?`,
+          options: ["Recto femoral", "Sartorio", "Grácil", "Aductor largo"],
+          answer: 1
+        },
+        {
+          text: `Durante una práctica deportiva, María recibe un golpe en la cara medial del muslo. Después presenta dolor al aducir la cadera y también molestias al flexionar la rodilla. ¿Qué músculo explica mejor ambos hallazgos?`,
+          options: ["Aductor largo", "Grácil", "Pectíneo", "Aductor corto"],
+          answer: 1
+        },
+        {
+          text: `En una práctica de fútbol, Andrés intenta frenar de golpe y siente un dolor profundo en la región medial del muslo. En la resonancia se observa una lesión cerca de la <strong>línea áspera del fémur</strong>, sin compromiso de la tibia. ¿Qué músculo es el más probable responsable?`,
+          options: ["Grácil", "Sartorio", "Aductor largo", "Semitendinoso"],
+          answer: 2,
+          explanation: `El aductor largo se inserta en el tercio medio de la línea áspera; grácil, sartorio y semitendinoso continúan hasta la tibia.`
+        },
+        {
+          text: `Durante una cirugía de cadera, se lesiona accidentalmente un tendón que se inserta en la <strong>fosa trocantérica</strong>, inmediatamente medial al trocánter mayor. Después el paciente presenta debilidad para la rotación lateral del muslo. ¿Qué músculo fue lesionado?`,
+          options: ["Piriforme", "Obturador externo", "Glúteo medio", "Cuadrado femoral"],
+          answer: 1
+        },
+        {
+          text: `En una guardia, Pedro llega después de recibir una herida profunda en la cara medial del muslo. La lesión compromete el <strong>conducto aductor</strong>, pero respeta el nervio safeno. Días después presenta debilidad marcada para la <strong>aducción del muslo</strong>, sin pérdida importante de extensión de rodilla. ¿Qué músculo es el más probablemente afectado directamente por la trayectoria de la herida?`,
+          options: ["Vasto medial", "Sartorio", "Aductor mayor", "Recto femoral"],
+          answer: 2,
+          explanation: `Distalmente, el conducto aductor se relaciona estrechamente con el aductor mayor antes de que los vasos atraviesen el hiato aductor.`
+        },
+        {
+          text: `Durante una práctica de disección, Juan introduce accidentalmente el bisturí en la región posterior del muslo, inmediatamente <strong>medial al nervio ciático</strong>. El corte compromete un músculo profundo del compartimento posterior que participa en la <strong>extensión de cadera y flexión de rodilla</strong>. ¿Qué músculo es el más probable?`,
+          options: ["Bíceps femoral, cabeza larga", "Semimembranoso", "Vasto lateral", "Aductor largo"],
+          answer: 1
+        },
+        {
+          text: `En una práctica deportiva, Camila sufre una herida profunda en la región posterior del muslo. La lesión queda <strong>inmediatamente medial al nervio ciático</strong> y produce debilidad para extender la cadera y flexionar la rodilla, pero la cabeza corta del bíceps femoral funciona normalmente. ¿Qué músculo está más probablemente lesionado?`,
+          options: ["Bíceps femoral, cabeza larga", "Semitendinoso", "Semimembranoso", "Aductor mayor"],
+          answer: 1,
+          explanation: `El semitendinoso ocupa una posición posteromedial respecto al trayecto del ciático y participa en extensión de cadera y flexión de rodilla.`
+        },
+        {
+          text: `Juan está practicando anatomía palpatoria y recibe, para variar, un golpe en la región superolateral de la fosa poplítea. Después presenta dolor al flexionar la rodilla y al rotar lateralmente la pierna flexionada. ¿Qué músculo forma el límite superolateral de la fosa poplítea y explica mejor esos hallazgos?`,
+          options: ["Semimembranoso", "Gastrocnemio lateral", "Bíceps femoral", "Semitendinoso"],
+          answer: 2
+        },
+        {
+          text: `Durante una práctica de anatomía, Juan decide impresionar al grupo palpándose la fosa poplítea y termina confundiendo sus límites. El docente le pregunta qué músculo forma el <strong>límite inferomedial</strong> de esta región y, además, participa en la flexión de la rodilla.`,
+          options: ["Bíceps femoral", "Gastrocnemio, cabeza medial", "Semimembranoso", "Poplíteo"],
+          answer: 1,
+          explanation: `La cabeza medial del gastrocnemio forma el límite inferomedial de la fosa poplítea; la cabeza lateral forma el inferolateral.`
+        },
+        {
+          text: `Un paciente recibe una herida penetrante superficial en el piso de la fosa poplítea. La lesión compromete el músculo que se encuentra <strong>profundo al gastrocnemio</strong>, se origina en el cóndilo lateral del fémur y ayuda a “desbloquear” la rodilla al iniciar la flexión. ¿Qué músculo fue lesionado?`,
+          options: ["Plantar", "Sóleo", "Poplíteo", "Semitendinoso"],
+          answer: 2
+        },
+        {
+          text: `En una carrera universitaria, Juan pisa mal al bajar un bordillo y queda con debilidad para <strong>elevar el borde lateral del pie</strong>. La lesión compromete un músculo del compartimento lateral de la pierna cuyo tendón pasa <strong>por detrás del maléolo lateral</strong> antes de dirigirse hacia la planta. ¿Qué músculo está más probablemente lesionado?`,
+          options: ["Fibular corto", "Fibular largo", "Tibial anterior", "Extensor largo de los dedos"],
+          answer: 1,
+          explanation: `Ambos fibulares pasan posteriores al maléolo lateral, pero el fibular largo continúa por la planta hasta la base del primer metatarsiano y el cuneiforme medial.`
+        },
+        {
+          text: `Camila se golpea la cara anterolateral de la pierna durante un partido. Después presenta dificultad para <strong>dorsiflexionar e invertir el pie</strong>, pero conserva relativamente la eversión. La lesión compromete un músculo cuyo tendón cruza por delante del tobillo y se dirige hacia el borde medial del pie. ¿Qué músculo está afectado?`,
+          options: ["Fibular tercero", "Extensor largo del hallux", "Tibial anterior", "Tibial posterior"],
+          answer: 2
+        },
+        {
+          text: `Juan, estudiante de medicina de la UNIMAG, se golpea con fuerza la <strong>cabeza del peroné</strong> jugando fútbol y después presenta dificultad para evertir el pie. Al explorar, el docente sospecha lesión de una rama del nervio fibular común que inerva el compartimento lateral de la pierna. ¿Qué músculo sería uno de los más directamente afectados?`,
+          options: ["Tibial anterior", "Fibular largo", "Extensor largo del hallux", "Tibial posterior"],
+          answer: 1,
+          explanation: `El nervio fibular común rodea el cuello del peroné; su rama superficial inerva los músculos fibular largo y corto.`
+        },
+        {
+          text: `María se tuerce el tobillo y queda con dolor localizado detrás del maléolo lateral. La resonancia muestra lesión del tendón que continúa por la planta del pie, cruza un surco del cuboides y termina en la base del primer metatarsiano y cuneiforme medial. ¿Qué músculo está lesionado?`,
+          options: ["Fibular corto", "Fibular largo", "Tibial posterior", "Extensor largo de los dedos"],
+          answer: 1
+        },
+        {
+          text: `En una práctica de atletismo, Sebastián recibe un golpe profundo en la región anterior de la pierna. Después puede extender los dedos, pero presenta marcada dificultad para <strong>dorsiflexionar e invertir el pie</strong>. ¿Qué músculo está más probablemente lesionado?`,
+          options: ["Extensor largo de los dedos", "Tibial anterior", "Fibular tercero", "Extensor largo del hallux"],
+          answer: 1,
+          explanation: `El tibial anterior es el músculo más medial del compartimento anterior, adyacente a la tibia, y combina dorsiflexión e inversión.`
+        },
+        {
+          text: `Juan, estudiante de medicina de la UNIMAG, se corta accidentalmente durante una disección cerca del trayecto del <strong>nervio fibular profundo y la arteria tibial anterior</strong>. Luego nota debilidad selectiva para extender el dedo gordo, mientras la dorsiflexión global del tobillo se conserva parcialmente. ¿Qué músculo fue probablemente afectado?`,
+          options: ["Tibial anterior", "Extensor largo de los dedos", "Extensor largo del hallux", "Fibular tercero"],
+          answer: 2
+        }
+      ];
+
+      const sequence = [];
+      for (let page = 1; page <= 8; page++) {
+        sequence.push({ type: "pdf", page });
+        sequence.push({ type: "question", questionIndex: (page - 1) * 2 });
+        sequence.push({ type: "question", questionIndex: (page - 1) * 2 + 1 });
+      }
+
+      const els = {
+        start: document.getElementById("startScreen"),
+        pdf: document.getElementById("pdfScreen"),
+        canvas: document.getElementById("pdfCanvas"),
+        pdfError: document.getElementById("pdfError"),
+        question: document.getElementById("questionScreen"),
+        result: document.getElementById("resultScreen"),
+        questionText: document.getElementById("questionText"),
+        options: document.getElementById("options"),
+        feedback: document.getElementById("feedback"),
+        next: document.getElementById("nextBtn"),
+        progress: document.getElementById("progress"),
+        resultScore: document.getElementById("resultScore"),
+        resultLabel: document.getElementById("resultLabel"),
+        restart: document.getElementById("restartBtn")
+      };
+
+      let pdfDoc = null;
+      let pdfLoadPromise = null;
+      let seqIndex = 0;
+      let score = 0;
+      let answered = false;
+      let renderingPage = false;
+
+      function hideAll() {
+        els.start.classList.add("hidden");
+        els.pdf.classList.add("hidden");
+        els.question.classList.add("hidden");
+        els.result.classList.add("hidden");
+      }
+
+      async function enterImmersiveMode() {
+        try {
+          if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+          }
+        } catch (_) {}
+
+        try {
+          if (screen.orientation && screen.orientation.lock) {
+            await screen.orientation.lock("landscape");
+          }
+        } catch (_) {}
+      }
+
+      function loadPdf() {
+        if (pdfLoadPromise) return pdfLoadPromise;
+
+        if (!window.pdfjsLib) {
+          pdfLoadPromise = Promise.reject(new Error("No se pudo cargar PDF.js."));
+          return pdfLoadPromise;
+        }
+
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+        pdfLoadPromise = window.pdfjsLib.getDocument(PDF_FILE).promise
+          .then(doc => {
+            pdfDoc = doc;
+            if (doc.numPages < 8) {
+              throw new Error(`El archivo ${PDF_FILE} tiene ${doc.numPages} página(s); se necesitan al menos 8.`);
+            }
+            return doc;
+          });
+
+        return pdfLoadPromise;
+      }
+
+      async function renderPdfPage(pageNumber) {
+        hideAll();
+        els.pdf.classList.remove("hidden");
+        els.pdfError.classList.add("hidden");
+        els.canvas.classList.remove("hidden");
+        renderingPage = true;
+
+        try {
+          const doc = await loadPdf();
+          const page = await doc.getPage(pageNumber);
+          const baseViewport = page.getViewport({ scale: 1 });
+
+          const availableW = window.innerWidth;
+          const availableH = window.innerHeight;
+          const cssScale = Math.min(
+            availableW / baseViewport.width,
+            availableH / baseViewport.height
+          );
+
+          const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+          const renderViewport = page.getViewport({ scale: cssScale * dpr });
+
+          const canvas = els.canvas;
+          const ctx = canvas.getContext("2d", { alpha: false });
+
+          canvas.width = Math.floor(renderViewport.width);
+          canvas.height = Math.floor(renderViewport.height);
+          canvas.style.width = Math.floor(baseViewport.width * cssScale) + "px";
+          canvas.style.height = Math.floor(baseViewport.height * cssScale) + "px";
+
+          await page.render({
+            canvasContext: ctx,
+            viewport: renderViewport,
+            background: "white"
+          }).promise;
+        } catch (err) {
+          els.canvas.classList.add("hidden");
+          els.pdfError.classList.remove("hidden");
+          els.pdfError.innerHTML =
+            `<strong>No pude abrir “${PDF_FILE}”.</strong><br><br>` +
+            `Asegúrate de colocar <b>diapositiva.pdf</b> en la misma carpeta que <b>index.html</b> y abrir la página desde un servidor web.<br><br>` +
+            `<span style="opacity:.72">${String(err.message || err)}</span>`;
+        } finally {
+          renderingPage = false;
+        }
+      }
+
+      function renderQuestion(index) {
+        hideAll();
+        els.question.classList.remove("hidden");
+        answered = false;
+
+        const q = questions[index];
+        els.questionText.innerHTML = q.text;
+        els.options.innerHTML = "";
+        els.feedback.innerHTML = "";
+        els.feedback.className = "feedback";
+        els.next.classList.add("hidden");
+        els.progress.textContent = `${index + 1} / ${questions.length}`;
+
+        q.options.forEach((optionText, optionIndex) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "option";
+          button.innerHTML = `<strong>${String.fromCharCode(65 + optionIndex)}.</strong> ${optionText}`;
+          button.addEventListener("click", () => answerQuestion(index, optionIndex));
+          els.options.appendChild(button);
+        });
+      }
+
+      function answerQuestion(questionIndex, chosenIndex) {
+        if (answered) return;
+        answered = true;
+
+        const q = questions[questionIndex];
+        const buttons = Array.from(els.options.querySelectorAll(".option"));
+        const correct = chosenIndex === q.answer;
+
+        buttons.forEach((btn, i) => {
+          btn.disabled = true;
+          if (i === q.answer) btn.classList.add("correct");
+          if (i === chosenIndex && i !== q.answer) btn.classList.add("wrong");
+        });
+
+        if (correct) {
+          score += 1;
+          els.feedback.classList.add("correctText");
+          els.feedback.innerHTML =
+            `✓ Correcto` +
+            (q.explanation ? `<span class="explanation">${q.explanation}</span>` : "");
+        } else {
+          els.feedback.classList.add("wrongText");
+          const letter = String.fromCharCode(65 + q.answer);
+          els.feedback.innerHTML =
+            `✕ Incorrecto · ${letter}. ${q.options[q.answer]}` +
+            (q.explanation ? `<span class="explanation">${q.explanation}</span>` : "");
+        }
+
+        els.next.classList.remove("hidden");
+        els.next.focus({ preventScroll: true });
+      }
+
+      function renderCurrent() {
+        if (seqIndex >= sequence.length) {
+          showResult();
+          return;
+        }
+
+        const item = sequence[seqIndex];
+        if (item.type === "pdf") {
+          renderPdfPage(item.page);
+        } else {
+          renderQuestion(item.questionIndex);
+        }
+      }
+
+      function advance() {
+        seqIndex += 1;
+        renderCurrent();
+      }
+
+      function showResult() {
+        hideAll();
+        els.result.classList.remove("hidden");
+        els.resultScore.textContent = `${score}/${questions.length}`;
+
+        const pct = Math.round((score / questions.length) * 100);
+        els.resultLabel.textContent =
+          pct >= 90 ? "Excelente" :
+          pct >= 75 ? "Muy buen resultado" :
+          pct >= 60 ? "Buen avance" :
+          "Conviene repasar la topografía";
+      }
+
+      function restart() {
+        seqIndex = 0;
+        score = 0;
+        answered = false;
+        renderCurrent();
+      }
+
+      async function startExam() {
+        await enterImmersiveMode();
+        seqIndex = 0;
+        score = 0;
+        answered = false;
+        renderCurrent();
+      }
+
+      els.start.addEventListener("click", startExam);
+      els.start.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") startExam();
+      });
+
+      els.pdf.addEventListener("click", () => {
+        if (!renderingPage) advance();
+      });
+
+      els.next.addEventListener("click", advance);
+      els.restart.addEventListener("click", restart);
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === "Enter") {
+          if (!els.pdf.classList.contains("hidden") && !renderingPage) {
+            advance();
+          } else if (!els.question.classList.contains("hidden") && answered) {
+            advance();
+          }
+        }
+      });
+
+      let resizeTimer = null;
+      window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          const item = sequence[seqIndex];
+          if (item && item.type === "pdf" && !els.pdf.classList.contains("hidden")) {
+            renderPdfPage(item.page);
+          }
+        }, 160);
+      });
+    })();
+  </script>
+</body>
+</html>
